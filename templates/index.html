@@ -803,8 +803,8 @@
                 return;
             }
 
-            const audioFile = document.getElementById('audio-input').files[0];
-            if (!audioFile) {
+            const currentAudioFile = audioInput.files[0];
+            if (!currentAudioFile) {
                 notyf.error('Debes seleccionar un archivo de audio');
                 generateBtn.disabled = false;
                 hideLoading();
@@ -836,7 +836,7 @@
             });
 
             // Subir audio
-            formData.append('audio', audioFile);
+            formData.append('audio', currentAudioFile);
             formData.append('options', JSON.stringify(options));
 
             // Conectar a las actualizaciones de progreso
@@ -870,6 +870,9 @@
                     audioFile = null;
                     preview.innerHTML = '';
                     audioInput.value = '';
+                    volumeSlider.value = 1;
+                    volumeValue.textContent = '100%';
+                    document.getElementById('audioStart').value = '0';
                     updateStatusBar();
                     updateGenerateButton();
                 }
