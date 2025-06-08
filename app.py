@@ -2,11 +2,23 @@ import os
 from datetime import datetime
 from flask import Flask, request, render_template, jsonify, send_file, Response
 from werkzeug.utils import secure_filename
-from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips, CompositeVideoClip, ColorClip
+from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips, CompositeVideoClip, ColorClip, TextClip, VideoFileClip
+from moviepy.video.fx.all import resize, rotate, fadeout, fadein
+from moviepy.config import change_settings
 from PIL import Image
 import random
 import uuid
 import json
+import subprocess
+
+# Verificar y configurar ImageMagick
+try:
+    # Intentar ejecutar convert para verificar la instalación
+    subprocess.run(['convert', '-version'], check=True, capture_output=True)
+    # Configurar MoviePy para usar ImageMagick
+    change_settings({"IMAGEMAGICK_BINARY": "convert"})
+except Exception as e:
+    print(f"Error al configurar ImageMagick: {str(e)}")
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -22,6 +34,26 @@ class Config:
     TRANSITION_DURATION = 0.5
     MAX_VIDEO_DURATION = 300  # 5 minutos máximo
     VIDEO_SIZE = (1080, 1920)  # Tamaño vertical para TikTok/Reels
+    DEFAULT_FONT_SIZE = 70
+    DEFAULT_FONT_COLOR = 'white'
+    TEXT_PADDING = 20
+    # Lista de fuentes alternativas
+    FONT_PATHS = [
+        '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+        '/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf',
+        '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
+        'Arial'
+    ]
+
+    @classmethod
+    def get_available_font(cls):
+        """Encuentra la primera fuente disponible de la lista"""
+        for font_path in cls.FONT_PATHS:
+            if font_path == 'Arial':
+                return font_path
+            if os.path.exists(font_path):
+                return font_path
+        return 'Arial'  # Fallback a Arial si no se encuentra ninguna
 
 # Utilidades
 class VideoUtils:
@@ -57,37 +89,44 @@ class VideoUtils:
     @staticmethod
     def resize_image(image_path):
         with Image.open(image_path) as img:
-            # Redimensionar manteniendo la relación de aspecto
             img = img.convert('RGB')
-            ratio = min(Config.VIDEO_SIZE[0]/img.size[0], Config.VIDEO_SIZE[1]/img.size[1])
-            new_size = tuple(int(dim * ratio) for dim in img.size)
-            img = img.resize(new_size, Image.LANCZOS)
             
-            # Crear un fondo negro del tamaño del video
-            background = Image.new('RGB', Config.VIDEO_SIZE, (0, 0, 0))
+            # Calcular el tamaño para llenar completamente la pantalla
+            width_ratio = Config.VIDEO_SIZE[0] / img.size[0]
+            height_ratio = Config.VIDEO_SIZE[1] / img.size[1]
+            scale_ratio = max(width_ratio, height_ratio)
             
-            # Centrar la imagen en el fondo
-            offset = ((Config.VIDEO_SIZE[0] - new_size[0]) // 2,
-                     (Config.VIDEO_SIZE[1] - new_size[1]) // 2)
-            background.paste(img, offset)
+            # Escalar la imagen para que cubra toda la pantalla
+            new_width = int(img.size[0] * scale_ratio)
+            new_height = int(img.size[1] * scale_ratio)
+            img = img.resize((new_width, new_height), Image.LANCZOS)
             
-            # Guardar la imagen procesada
+            # Recortar desde el centro
+            left = (new_width - Config.VIDEO_SIZE[0]) // 2
+            top = (new_height - Config.VIDEO_SIZE[1]) // 2
+            right = left + Config.VIDEO_SIZE[0]
+            bottom = top + Config.VIDEO_SIZE[1]
+            
+            # Si la imagen es más pequeña que el tamaño objetivo, ajustar
+            if new_width < Config.VIDEO_SIZE[0] or new_height < Config.VIDEO_SIZE[1]:
+                # Crear un fondo negro del tamaño objetivo
+                background = Image.new('RGB', Config.VIDEO_SIZE, (0, 0, 0))
+                # Calcular posición para centrar la imagen pequeña
+                paste_x = (Config.VIDEO_SIZE[0] - new_width) // 2
+                paste_y = (Config.VIDEO_SIZE[1] - new_height) // 2
+                background.paste(img, (paste_x, paste_y))
+                img = background
+            else:
+                img = img.crop((left, top, right, bottom))
+            
             processed_path = image_path.replace('.', '_processed.')
-            background.save(processed_path, 'JPEG', quality=95)
+            img.save(processed_path, 'JPEG', quality=95)
             return processed_path
 
 class Transitions:
     @staticmethod
     def fade():
         return lambda t: 1 if t > 0.5 else 2*t
-
-    @staticmethod
-    def slide_left(clip, duration):
-        return clip.set_position(lambda t: (Config.VIDEO_SIZE[0]*(0.5-t/duration), 'center'))
-
-    @staticmethod
-    def slide_right(clip, duration):
-        return clip.set_position(lambda t: (-Config.VIDEO_SIZE[0]*(0.5-t/duration), 'center'))
 
     @staticmethod
     def zoom_in(clip):
@@ -108,8 +147,6 @@ class VideoGenerator:
         self.options = options or {}
         self.transitions = {
             'fade': Transitions.fade,
-            'slide_left': Transitions.slide_left,
-            'slide_right': Transitions.slide_right,
             'zoom_in': Transitions.zoom_in,
             'zoom_out': Transitions.zoom_out,
             'rotate': Transitions.rotate
@@ -121,61 +158,121 @@ class VideoGenerator:
             clip2 = clip2.set_start(clip1.end - duration)
             clip2 = clip2.crossfadein(duration)
             return [clip1, clip2]
-        elif transition_type in ['slide_left', 'slide_right']:
-            clip2 = clip2.set_start(clip1.end - duration)
-            clip1 = getattr(Transitions, transition_type)(clip1, duration)
-            clip2 = getattr(Transitions, transition_type)(clip2, duration)
+        elif transition_type in ['zoom_in', 'zoom_out', 'rotate']:
+            clip2 = clip2.set_start(clip1.end)
+            clip1 = getattr(Transitions, transition_type)(clip1)
             return [clip1, clip2]
         else:
-            clip2 = clip2.set_start(clip1.end)
-            return [getattr(Transitions, transition_type)(clip1), clip2]
+            # Si la transición no existe, usar fade
+            clip2 = clip2.set_start(clip1.end - duration)
+            clip2 = clip2.crossfadein(duration)
+            return [clip1, clip2]
 
     def generate(self):
-        clips = []
-        progress_callback = self.options.get('progress_callback', lambda x: None)
-        
-        for i, img in enumerate(self.image_files):
-            progress = (i / len(self.image_files)) * 100
-            progress_callback(progress)
+        try:
+            clips = []
+            progress_callback = self.options.get('progress_callback', lambda x: None)
+            total_steps = len(self.image_files) * 2
+            current_step = 0
             
-            # Procesar y redimensionar la imagen
-            img_path = os.path.join(app.config['UPLOAD_FOLDER'], 'images', img)
-            processed_path = VideoUtils.resize_image(img_path)
+            # Paso 1: Procesar todas las imágenes
+            processed_images = []
+            for img in self.image_files:
+                print(f"Procesando imagen: {img}")
+                img_path = os.path.join(app.config['UPLOAD_FOLDER'], 'images', img)
+                processed_path = VideoUtils.resize_image(img_path)
+                processed_images.append(processed_path)
+                current_step += 1
+                progress = int((current_step / total_steps) * 100)
+                print(f"Progreso: {progress}%")
+                progress_callback(progress)
             
-            duration = self.options.get('durations', {}).get(img, Config.DEFAULT_IMAGE_DURATION)
-            clip = ImageClip(processed_path)
-            clip = clip.set_duration(duration)
+            # Paso 2: Generar el video
+            for i, processed_path in enumerate(processed_images):
+                print(f"Generando clip {i+1} de {len(processed_images)}")
+                duration = self.options.get('durations', {}).get(self.image_files[i], Config.DEFAULT_IMAGE_DURATION)
+                clip = ImageClip(processed_path)
+                clip = clip.set_duration(duration)
+                
+                if i > 0:
+                    transition = self.options.get('transitions', {}).get(str(i), 'fade')
+                    if transition in self.transitions:
+                        print(f"Aplicando transición: {transition}")
+                        clips.extend(self.create_transition(clips[-1], clip, transition))
+                    else:
+                        print("Aplicando transición por defecto: fade")
+                        clips.extend(self.create_transition(clips[-1], clip, 'fade'))
+                else:
+                    clips.append(clip)
+                
+                current_step += 1
+                progress = int((current_step / total_steps) * 100)
+                print(f"Progreso: {progress}%")
+                progress_callback(progress)
+                
+                # Limpiar imagen procesada
+                try:
+                    os.remove(processed_path)
+                except:
+                    pass
+
+            print("Concatenando clips...")
+            final_clip = concatenate_videoclips(clips, method='compose')
             
-            if i > 0:
-                transition = self.options.get('transitions', {}).get(str(i), 'fade')
-                clips.extend(self.create_transition(clips[-1], clip, transition))
-            else:
-                clips.append(clip)
+            # Añadir audio
+            print("Procesando audio...")
+            audio_path = os.path.join(app.config['UPLOAD_FOLDER'], 'music', self.audio_file)
+            audio = AudioFileClip(audio_path)
             
-            # Limpiar imagen procesada
+            audio_start = self.options.get('audio_start', 0)
+            if audio_start > 0:
+                print(f"Ajustando tiempo de inicio del audio: {audio_start}s")
+                audio = audio.subclip(audio_start)
+                
+            total_duration = final_clip.duration
+            audio = audio.set_duration(total_duration)
+            audio = audio.volumex(self.options.get('audio_volume', 1.0))
+            
+            final_clip = final_clip.set_audio(audio)
+            
+            output_filename = VideoUtils.generate_unique_filename(f"video.{Config.OUTPUT_FORMAT}")
+            output_path = os.path.join(app.config['UPLOAD_FOLDER'], 'output', output_filename)
+            
+            print("Escribiendo video final...")
+            final_clip.write_videofile(
+                output_path, 
+                fps=Config.FPS, 
+                codec='libx264', 
+                audio_codec='aac',
+                verbose=False,
+                logger=None
+            )
+            print("Video generado con éxito!")
+            progress_callback(100)
+            
+            # Limpiar archivos temporales después de generar el video
+            self._cleanup_temp_files()
+            
+            return output_filename
+        except Exception as e:
+            # Si algo falla, asegurarnos de limpiar los archivos temporales
+            self._cleanup_temp_files()
+            raise e
+
+    def _cleanup_temp_files(self):
+        """Limpia los archivos temporales usados en la generación"""
+        # Limpiar imágenes originales
+        for img in self.image_files:
             try:
-                os.remove(processed_path)
+                os.remove(os.path.join(app.config['UPLOAD_FOLDER'], 'images', img))
             except:
                 pass
-
-        final_clip = concatenate_videoclips(clips, method='compose')
         
-        # Añadir audio
-        audio_path = os.path.join(app.config['UPLOAD_FOLDER'], 'music', self.audio_file)
-        audio = AudioFileClip(audio_path)
-        total_duration = final_clip.duration
-        audio = audio.set_duration(total_duration)
-        audio = audio.volumex(self.options.get('audio_volume', 1.0))
-        
-        final_clip = final_clip.set_audio(audio)
-        
-        output_filename = VideoUtils.generate_unique_filename(f"video.{Config.OUTPUT_FORMAT}")
-        output_path = os.path.join(app.config['UPLOAD_FOLDER'], 'output', output_filename)
-        
-        final_clip.write_videofile(output_path, fps=Config.FPS, codec='libx264', audio_codec='aac')
-        progress_callback(100)
-        
-        return output_filename
+        # Limpiar archivo de audio
+        try:
+            os.remove(os.path.join(app.config['UPLOAD_FOLDER'], 'music', self.audio_file))
+        except:
+            pass
 
 # Crear directorios necesarios al inicio
 VideoUtils.create_directories()
@@ -256,10 +353,14 @@ def generate_video():
 
 @app.route('/download/<filename>')
 def download_file(filename):
-    return send_file(
-        os.path.join(app.config['UPLOAD_FOLDER'], 'output', filename),
-        as_attachment=True
-    )
+    try:
+        return send_file(
+            os.path.join(app.config['UPLOAD_FOLDER'], 'output', filename),
+            as_attachment=True,
+            download_name=f"video_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4"
+        )
+    except Exception as e:
+        return jsonify({'error': 'Error al descargar el video'}), 404
 
 @app.route('/preview/<filename>')
 def preview_file(filename):
@@ -275,6 +376,22 @@ def list_videos():
         reverse=True
     )
     return jsonify({'videos': videos})
+
+@app.route('/cleanup', methods=['POST'])
+def cleanup():
+    """Endpoint para limpiar archivos temporales desde el frontend"""
+    try:
+        # Limpiar directorios de imágenes y música
+        for folder in ['images', 'music']:
+            folder_path = os.path.join(app.config['UPLOAD_FOLDER'], folder)
+            for file in os.listdir(folder_path):
+                try:
+                    os.remove(os.path.join(folder_path, file))
+                except:
+                    pass
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

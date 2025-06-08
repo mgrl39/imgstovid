@@ -3,111 +3,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generador de Videos para Vinted</title>
+    <title>Generador de Videos para TikTok</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css" rel="stylesheet">
     <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
         .drag-area {
-            border: 2px dashed #6c757d;
+            border: 3px dashed #dee2e6;
+            border-radius: 15px;
             min-height: 200px;
-            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-direction: column;
             transition: all 0.3s ease;
+            background: white;
+            cursor: pointer;
         }
         .drag-area.active {
             border-color: #0d6efd;
             background-color: #e7f1ff;
         }
+        .drag-area i {
+            font-size: 3rem;
+            color: #6c757d;
+            margin-bottom: 1rem;
+        }
         .preview-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 30px;
-            margin-top: 15px;
-            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+            padding: 1rem;
         }
         .preview-item {
-            position: relative;
-            width: 150px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: transform 0.2s;
+        }
+        .preview-item:hover {
+            transform: translateY(-5px);
         }
         .preview-image {
-            width: 150px;
-            height: 150px;
+            width: 100%;
+            height: 200px;
             object-fit: cover;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .preview-controls {
-            background: rgba(255,255,255,0.9);
-            padding: 8px;
-            border-radius: 8px;
-            margin-top: 5px;
+            padding: 1rem;
         }
-        .video-list {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        .progress-bar {
-            transition: width 0.5s ease;
-        }
-        .transition-preview {
-            width: 40px;
-            height: 40px;
-            margin: 2px;
-            cursor: pointer;
-            border: 2px solid transparent;
-        }
-        .transition-preview.selected {
-            border-color: #0d6efd;
-        }
-        #videoPreview {
-            width: 100%;
-            border-radius: 8px;
-            margin-top: 15px;
+        .handle {
+            padding: 0.5rem;
+            background: #f8f9fa;
+            text-align: center;
+            cursor: move;
+            color: #6c757d;
         }
         .transition-selector {
-            position: absolute;
-            left: 100%;
-            top: 50%;
-            transform: translateY(-50%);
-            background: white;
-            padding: 10px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            width: 50px;
-            margin-left: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            margin-top: 0.5rem;
         }
         .transition-selector .btn {
-            padding: 5px;
-            width: 100%;
+            padding: 0.375rem;
+            font-size: 0.875rem;
         }
         .transition-selector .btn.selected {
             background-color: #0d6efd;
             color: white;
         }
+        .audio-controls {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin: 1.5rem 0;
+        }
+        .progress-container {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin: 1.5rem 0;
+            display: none;
+        }
+        .progress-container.active {
+            display: block;
+        }
+        .progress {
+            height: 1.5rem;
+            margin: 1rem 0;
+        }
+        .progress-status {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .progress-status p {
+            margin: 0;
+            padding: 0.25rem 0;
+            font-family: monospace;
+        }
+        .progress-status p:last-child {
+            color: #0d6efd;
+            font-weight: bold;
+        }
+        .video-preview {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin: 1.5rem 0;
+        }
+        .video-list {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .video-list .list-group-item {
+            border: none;
+            border-radius: 10px;
+            margin-bottom: 0.5rem;
+            background: #f8f9fa;
+        }
+        .video-list .list-group-item:hover {
+            background: #e9ecef;
+        }
+        .btn-generate {
+            padding: 1rem 2rem;
+            font-size: 1.25rem;
+            border-radius: 50px;
+        }
     </style>
 </head>
-<body class="bg-light">
-    <div class="container py-5">
-        <h1 class="text-center mb-5">Generador de Videos para Vinted</h1>
+<body>
+    <div class="main-container">
+        <h1 class="text-center mb-4">Generador de Videos para TikTok</h1>
         
-        <div class="row">
+        <div class="row g-4">
             <div class="col-lg-8">
-                <!-- Generador de Videos -->
-                <div class="card shadow-sm mb-4">
+                <div class="card shadow-sm">
                     <div class="card-body">
-                        <h5 class="card-title">1. Sube tus imágenes</h5>
-                        <div class="drag-area p-4" id="drag-area">
-                            <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                        <h5 class="card-title mb-3">
+                            <i class="fas fa-images me-2"></i>Imágenes
+                        </h5>
+                        <div class="drag-area" id="drag-area">
+                            <i class="fas fa-cloud-upload-alt"></i>
                             <p class="mb-2">Arrastra y suelta imágenes aquí o</p>
-                            <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
-                                <i class="fas fa-images me-2"></i>Selecciona archivos
+                            <button class="btn btn-primary px-4" onclick="document.getElementById('file-input').click()">
+                                Seleccionar archivos
                             </button>
                             <input type="file" id="file-input" multiple accept="image/*" class="d-none">
                         </div>
@@ -115,103 +174,81 @@
                     </div>
                 </div>
 
-                <div class="card shadow-sm mb-4">
-                    <div class="card-body">
-                        <h5 class="card-title">2. Personaliza las transiciones</h5>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <label class="form-label">Duración por defecto (segundos)</label>
-                                <input type="number" class="form-control" id="defaultDuration" value="3" min="1" max="10">
+                <div class="audio-controls">
+                    <h5 class="mb-3">
+                        <i class="fas fa-music me-2"></i>Audio
+                    </h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Seleccionar música</label>
+                            <div class="input-group">
+                                <input type="file" id="audio-input" accept=".mp3,.wav,.m4a" class="form-control">
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Volumen de música</label>
-                                <input type="range" class="form-range" id="audioVolume" min="0" max="1" step="0.1" value="1">
-                            </div>
+                            <small class="text-muted" id="audio-name">Ningún archivo seleccionado</small>
                         </div>
-                        <div class="mt-3">
-                            <label class="form-label">Transiciones disponibles</label>
-                            <div class="d-flex flex-wrap" id="transitionPreviews">
-                                <div class="transition-preview selected" data-transition="fade">
-                                    <i class="fas fa-fade fa-2x"></i>
-                                </div>
-                                <div class="transition-preview" data-transition="slide_left">
-                                    <i class="fas fa-arrow-left fa-2x"></i>
-                                </div>
-                                <div class="transition-preview" data-transition="slide_right">
-                                    <i class="fas fa-arrow-right fa-2x"></i>
-                                </div>
-                                <div class="transition-preview" data-transition="zoom_in">
-                                    <i class="fas fa-search-plus fa-2x"></i>
-                                </div>
-                                <div class="transition-preview" data-transition="zoom_out">
-                                    <i class="fas fa-search-minus fa-2x"></i>
-                                </div>
-                                <div class="transition-preview" data-transition="rotate">
-                                    <i class="fas fa-sync fa-2x"></i>
-                                </div>
-                            </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Volumen</label>
+                            <input type="range" class="form-range" id="audioVolume" min="0" max="1" step="0.1" value="1">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Inicio (segundos)</label>
+                            <input type="number" class="form-control" id="audioStart" value="0" min="0">
                         </div>
                     </div>
                 </div>
 
-                <div class="card shadow-sm mb-4">
-                    <div class="card-body">
-                        <h5 class="card-title">3. Añade música</h5>
-                        <div class="d-flex align-items-center">
-                            <input type="file" id="audio-input" accept=".mp3,.wav,.m4a" class="d-none">
-                            <button class="btn btn-secondary me-3" onclick="document.getElementById('audio-input').click()">
-                                <i class="fas fa-music me-2"></i>Seleccionar música
-                            </button>
-                            <span id="audio-name" class="text-muted">Ningún archivo seleccionado</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="text-center mb-4">
-                    <button id="generate-btn" class="btn btn-success btn-lg" disabled>
-                        <i class="fas fa-video me-2"></i>Generar Video
+                <div class="text-center">
+                    <button id="generate-btn" class="btn btn-success btn-generate" disabled>
+                        <i class="fas fa-magic me-2"></i>Generar Video
                     </button>
                 </div>
 
-                <div class="progress mb-3 d-none" id="progressBar">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                <div id="progressContainer" class="progress-container">
+                    <h5 class="mb-3">
+                        <i class="fas fa-cog fa-spin me-2"></i>Progreso
+                    </h5>
+                    <div class="progress">
+                        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <div id="progressStatus" class="progress-status">
+                        <p>Esperando para comenzar...</p>
+                    </div>
                 </div>
 
-                <div id="videoPreviewContainer" class="d-none">
-                    <video id="videoPreview" controls>
+                <div id="videoPreviewContainer" class="video-preview d-none">
+                    <h5 class="mb-3">
+                        <i class="fas fa-play-circle me-2"></i>Vista previa
+                    </h5>
+                    <video id="videoPreview" controls class="w-100 rounded">
                         Tu navegador no soporta la reproducción de video.
                     </video>
                 </div>
             </div>
 
             <div class="col-lg-4">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="card-title mb-0">
-                            <i class="fas fa-film me-2"></i>Videos Generados
-                        </h5>
-                    </div>
-                    <div class="card-body video-list">
-                        <div class="list-group" id="videosList">
-                            {% for video in videos %}
-                            <div class="list-group-item">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <i class="fas fa-video me-2"></i>
-                                        {{ video }}
-                                    </div>
-                                    <div>
-                                        <button class="btn btn-sm btn-outline-primary me-2" onclick="previewVideo('{{ video }}')">
-                                            <i class="fas fa-play"></i>
-                                        </button>
-                                        <a href="/download/{{ video }}" class="btn btn-sm btn-outline-success">
-                                            <i class="fas fa-download"></i>
-                                        </a>
-                                    </div>
+                <div class="video-list">
+                    <h5 class="mb-3">
+                        <i class="fas fa-film me-2"></i>Videos Generados
+                    </h5>
+                    <div id="videosList" class="list-group">
+                        {% for video in videos %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="text-truncate me-2">
+                                    <i class="fas fa-video me-2"></i>
+                                    {{ video }}
+                                </div>
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="previewVideo('{{ video }}')">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                    <a href="/download/{{ video }}" class="btn btn-sm btn-outline-success" download>
+                                        <i class="fas fa-download"></i>
+                                    </a>
                                 </div>
                             </div>
-                            {% endfor %}
                         </div>
+                        {% endfor %}
                     </div>
                 </div>
             </div>
@@ -220,24 +257,39 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script>
         const notyf = new Notyf({
             duration: 3000,
-            position: { x: 'right', y: 'top' }
+            position: { x: 'right', y: 'top' },
+            types: [
+                {
+                    type: 'info',
+                    background: '#0dcaf0',
+                    icon: false
+                }
+            ]
         });
 
         let uploadedImages = [];
         let audioFile = null;
-        let selectedTransition = 'fade';
         const dragArea = document.getElementById('drag-area');
         const fileInput = document.getElementById('file-input');
         const audioInput = document.getElementById('audio-input');
         const preview = document.getElementById('preview');
         const generateBtn = document.getElementById('generate-btn');
+        const progressContainer = document.getElementById('progressContainer');
         const progressBar = document.getElementById('progressBar');
-        const progressBarInner = progressBar.querySelector('.progress-bar');
+        const progressStatus = document.getElementById('progressStatus');
         const videoPreviewContainer = document.getElementById('videoPreviewContainer');
         const videoPreview = document.getElementById('videoPreview');
+
+        // Hacer el contenedor de imágenes ordenable
+        new Sortable(preview, {
+            animation: 150,
+            handle: '.handle',
+            onEnd: updateTransitionSelectors
+        });
 
         // Manejadores de drag and drop
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -250,69 +302,59 @@
         }
 
         ['dragenter', 'dragover'].forEach(eventName => {
-            dragArea.addEventListener(eventName, highlight, false);
+            dragArea.addEventListener(eventName, () => dragArea.classList.add('active'));
         });
 
         ['dragleave', 'drop'].forEach(eventName => {
-            dragArea.addEventListener(eventName, unhighlight, false);
+            dragArea.addEventListener(eventName, () => dragArea.classList.remove('active'));
         });
 
-        function highlight() {
-            dragArea.classList.add('active');
-        }
-
-        function unhighlight() {
-            dragArea.classList.remove('active');
-        }
-
-        dragArea.addEventListener('drop', handleDrop, false);
-
-        // Manejadores de transiciones
-        document.querySelectorAll('.transition-preview').forEach(preview => {
-            preview.addEventListener('click', () => {
-                document.querySelectorAll('.transition-preview').forEach(p => p.classList.remove('selected'));
-                preview.classList.add('selected');
-                selectedTransition = preview.dataset.transition;
-            });
-        });
-
-        function handleDrop(e) {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            handleFiles(files);
-        }
-
-        fileInput.addEventListener('change', function() {
-            handleFiles(this.files);
-        });
+        dragArea.addEventListener('drop', e => handleFiles(e.dataTransfer.files));
+        fileInput.addEventListener('change', e => handleFiles(e.target.files));
 
         audioInput.addEventListener('change', function() {
             if (this.files.length > 0) {
                 audioFile = this.files[0];
                 document.getElementById('audio-name').textContent = audioFile.name;
                 updateGenerateButton();
+                notyf.success('Audio seleccionado');
             }
         });
+
+        function addProgressLog(message) {
+            const p = document.createElement('p');
+            p.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
+            progressStatus.appendChild(p);
+            progressStatus.scrollTop = progressStatus.scrollHeight;
+        }
 
         function handleFiles(files) {
             [...files].forEach(file => {
                 if (file.type.startsWith('image/')) {
                     uploadedImages.push({
                         file: file,
-                        duration: parseInt(document.getElementById('defaultDuration').value),
-                        transition: selectedTransition
+                        duration: 3,
+                        transition: 'fade'
                     });
-                    displayImage(file, uploadedImages.length - 1);
+                    displayImage(uploadedImages.length - 1);
+                    notyf.success('Imagen añadida');
                 }
             });
             updateGenerateButton();
         }
 
-        function displayImage(file, index) {
+        function displayImage(index) {
+            const imageData = uploadedImages[index];
             const reader = new FileReader();
+            
             reader.onload = function(e) {
                 const container = document.createElement('div');
                 container.className = 'preview-item';
+                container.dataset.index = index;
+                
+                const handle = document.createElement('div');
+                handle.className = 'handle';
+                handle.innerHTML = '<i class="fas fa-grip-lines"></i>';
                 
                 const img = document.createElement('img');
                 img.src = e.target.result;
@@ -321,71 +363,87 @@
                 const controls = document.createElement('div');
                 controls.className = 'preview-controls';
                 
+                const durationGroup = document.createElement('div');
+                durationGroup.className = 'mb-3';
+                
+                const durationLabel = document.createElement('label');
+                durationLabel.className = 'form-label';
+                durationLabel.textContent = 'Duración (segundos)';
+                
                 const durationInput = document.createElement('input');
                 durationInput.type = 'number';
-                durationInput.className = 'form-control form-control-sm mb-2';
-                durationInput.value = uploadedImages[index].duration;
+                durationInput.className = 'form-control';
+                durationInput.value = imageData.duration;
                 durationInput.min = 1;
                 durationInput.max = 10;
                 durationInput.addEventListener('change', () => {
-                    uploadedImages[index].duration = parseInt(durationInput.value);
+                    imageData.duration = parseInt(durationInput.value);
                 });
                 
+                durationGroup.appendChild(durationLabel);
+                durationGroup.appendChild(durationInput);
+                controls.appendChild(durationGroup);
+                
+                if (index < uploadedImages.length - 1) {
+                    const transitionGroup = document.createElement('div');
+                    transitionGroup.className = 'mb-3';
+                    
+                    const transitionLabel = document.createElement('label');
+                    transitionLabel.className = 'form-label';
+                    transitionLabel.textContent = 'Transición';
+                    
+                    const transitionSelector = document.createElement('div');
+                    transitionSelector.className = 'transition-selector';
+                    
+                    const transitions = {
+                        'fade': ['fa-fade', 'Desvanecer'],
+                        'zoom_in': ['fa-search-plus', 'Acercar'],
+                        'zoom_out': ['fa-search-minus', 'Alejar'],
+                        'rotate': ['fa-sync', 'Rotar']
+                    };
+
+                    Object.entries(transitions).forEach(([type, [icon, text]]) => {
+                        const btn = document.createElement('button');
+                        btn.className = `btn btn-sm btn-outline-primary ${imageData.transition === type ? 'selected' : ''}`;
+                        btn.innerHTML = `<i class="fas ${icon}"></i> ${text}`;
+                        btn.onclick = () => {
+                            transitionSelector.querySelectorAll('.btn').forEach(b => b.classList.remove('selected'));
+                            btn.classList.add('selected');
+                            imageData.transition = type;
+                        };
+                        transitionSelector.appendChild(btn);
+                    });
+                    
+                    transitionGroup.appendChild(transitionLabel);
+                    transitionGroup.appendChild(transitionSelector);
+                    controls.appendChild(transitionGroup);
+                }
+                
                 const removeBtn = document.createElement('button');
-                removeBtn.className = 'btn btn-danger btn-sm w-100';
-                removeBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                removeBtn.className = 'btn btn-danger w-100';
+                removeBtn.innerHTML = '<i class="fas fa-trash"></i> Eliminar';
                 removeBtn.onclick = () => {
                     uploadedImages.splice(index, 1);
                     container.remove();
                     updateTransitionSelectors();
                     updateGenerateButton();
+                    notyf.error('Imagen eliminada');
                 };
                 
-                controls.appendChild(durationInput);
                 controls.appendChild(removeBtn);
+                
+                container.appendChild(handle);
                 container.appendChild(img);
                 container.appendChild(controls);
-
-                // Añadir selector de transición si no es la última imagen
-                if (index < uploadedImages.length - 1) {
-                    const transitionSelector = document.createElement('div');
-                    transitionSelector.className = 'transition-selector';
-                    
-                    const transitions = {
-                        'fade': 'fa-fade',
-                        'slide_left': 'fa-arrow-left',
-                        'slide_right': 'fa-arrow-right',
-                        'zoom_in': 'fa-search-plus',
-                        'zoom_out': 'fa-search-minus',
-                        'rotate': 'fa-sync'
-                    };
-
-                    Object.entries(transitions).forEach(([type, icon]) => {
-                        const btn = document.createElement('button');
-                        btn.className = `btn btn-sm btn-outline-primary ${uploadedImages[index].transition === type ? 'selected' : ''}`;
-                        btn.innerHTML = `<i class="fas ${icon}"></i>`;
-                        btn.onclick = () => {
-                            transitionSelector.querySelectorAll('.btn').forEach(b => b.classList.remove('selected'));
-                            btn.classList.add('selected');
-                            uploadedImages[index].transition = type;
-                        };
-                        transitionSelector.appendChild(btn);
-                    });
-
-                    container.appendChild(transitionSelector);
-                }
-
                 preview.appendChild(container);
             };
-            reader.readAsDataURL(file);
+            
+            reader.readAsDataURL(imageData.file);
         }
 
         function updateTransitionSelectors() {
-            // Limpiar y volver a mostrar todas las imágenes
             preview.innerHTML = '';
-            uploadedImages.forEach((img, index) => {
-                displayImage(img.file, index);
-            });
+            uploadedImages.forEach((_, index) => displayImage(index));
         }
 
         function updateGenerateButton() {
@@ -393,9 +451,9 @@
         }
 
         function updateProgress(progress) {
-            progressBar.classList.remove('d-none');
-            progressBarInner.style.width = `${progress}%`;
-            progressBarInner.setAttribute('aria-valuenow', progress);
+            progressContainer.classList.add('active');
+            progressBar.style.width = `${progress}%`;
+            progressBar.setAttribute('aria-valuenow', progress);
         }
 
         function previewVideo(filename) {
@@ -404,9 +462,22 @@
             videoPreview.play();
         }
 
+        async function cleanupFiles() {
+            try {
+                await fetch('/cleanup', { method: 'POST' });
+            } catch (error) {
+                console.error('Error al limpiar archivos:', error);
+            }
+        }
+
+        window.addEventListener('beforeunload', cleanupFiles);
+
         generateBtn.addEventListener('click', async function() {
             generateBtn.disabled = true;
+            progressContainer.classList.add('active');
+            progressStatus.innerHTML = '';
             updateProgress(0);
+            addProgressLog('Iniciando generación del video...');
 
             const formData = new FormData();
             uploadedImages.forEach(({file}) => {
@@ -414,12 +485,14 @@
             });
 
             try {
+                addProgressLog('Subiendo imágenes...');
                 const imageResponse = await fetch('/upload_images', {
                     method: 'POST',
                     body: formData
                 });
                 const imageData = await imageResponse.json();
 
+                addProgressLog('Subiendo audio...');
                 const audioFormData = new FormData();
                 audioFormData.append('audio', audioFile);
                 const audioResponse = await fetch('/upload_audio', {
@@ -431,16 +504,18 @@
                 const options = {
                     durations: {},
                     transitions: {},
-                    audio_volume: parseFloat(document.getElementById('audioVolume').value)
+                    audio_volume: parseFloat(document.getElementById('audioVolume').value),
+                    audio_start: parseFloat(document.getElementById('audioStart').value)
                 };
 
                 uploadedImages.forEach((img, index) => {
                     options.durations[imageData.filenames[index]] = img.duration;
-                    if (index > 0) {
-                        options.transitions[index] = img.transition;
+                    if (index < uploadedImages.length - 1) {
+                        options.transitions[index + 1] = img.transition;
                     }
                 });
 
+                addProgressLog('Generando video...');
                 const generateResponse = await fetch('/generate_video', {
                     method: 'POST',
                     headers: {
@@ -455,17 +530,21 @@
                 const generateData = await generateResponse.json();
 
                 if (generateData.success) {
+                    addProgressLog('¡Video generado con éxito!');
                     notyf.success('¡Video generado con éxito!');
-                    // Actualizar la lista de videos
+                    
                     const videosResponse = await fetch('/videos');
                     const videosData = await videosResponse.json();
                     updateVideosList(videosData.videos);
-                    // Mostrar el video generado
                     previewVideo(generateData.video_path);
+                    
+                    await cleanupFiles();
                 } else {
+                    addProgressLog('Error: ' + generateData.error);
                     notyf.error('Error al generar el video: ' + generateData.error);
                 }
             } catch (error) {
+                addProgressLog('Error: ' + error.message);
                 notyf.error('Error: ' + error.message);
             } finally {
                 generateBtn.disabled = false;
@@ -478,15 +557,15 @@
             videosList.innerHTML = videos.map(video => `
                 <div class="list-group-item">
                     <div class="d-flex justify-content-between align-items-center">
-                        <div>
+                        <div class="text-truncate me-2">
                             <i class="fas fa-video me-2"></i>
                             ${video}
                         </div>
-                        <div>
-                            <button class="btn btn-sm btn-outline-primary me-2" onclick="previewVideo('${video}')">
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-outline-primary" onclick="previewVideo('${video}')">
                                 <i class="fas fa-play"></i>
                             </button>
-                            <a href="/download/${video}" class="btn btn-sm btn-outline-success">
+                            <a href="/download/${video}" class="btn btn-sm btn-outline-success" download>
                                 <i class="fas fa-download"></i>
                             </a>
                         </div>
@@ -496,4 +575,4 @@
         }
     </script>
 </body>
-</html> 
+</html>
