@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from flask import Flask, request, render_template, jsonify, send_file, Response
+from flask import Flask, request, render_template, jsonify, send_file, Response, stream_with_context
 from werkzeug.utils import secure_filename
 from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips, CompositeVideoClip, ColorClip, TextClip, VideoFileClip
 from moviepy.video.fx.all import resize, rotate, fadeout, fadein
@@ -10,6 +10,8 @@ import random
 import uuid
 import json
 import subprocess
+import queue
+import threading
 
 # Verificar y configurar ImageMagick
 try:
@@ -23,6 +25,16 @@ except Exception as e:
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  # 32MB max-limit
+
+# Cola global para mensajes de progreso
+progress_queue = queue.Queue()
+
+def send_progress(progress, message):
+    """Envía una actualización de progreso a la cola"""
+    progress_queue.put({
+        'progress': progress,
+        'message': message
+    })
 
 # Configuración
 class Config:
@@ -171,44 +183,42 @@ class VideoGenerator:
     def generate(self):
         try:
             clips = []
-            progress_callback = self.options.get('progress_callback', lambda x: None)
-            total_steps = len(self.image_files) * 2
+            total_steps = len(self.image_files) * 2  # Procesamiento + generación
             current_step = 0
             
             # Paso 1: Procesar todas las imágenes
             processed_images = []
-            for img in self.image_files:
-                print(f"Procesando imagen: {img}")
+            for i, img in enumerate(self.image_files, 1):
+                send_progress(
+                    (i / len(self.image_files)) * 40,  # 0-40%
+                    f"Procesando imagen {i}/{len(self.image_files)}"
+                )
                 img_path = os.path.join(app.config['UPLOAD_FOLDER'], 'images', img)
                 processed_path = VideoUtils.resize_image(img_path)
                 processed_images.append(processed_path)
-                current_step += 1
-                progress = int((current_step / total_steps) * 100)
-                print(f"Progreso: {progress}%")
-                progress_callback(progress)
             
-            # Paso 2: Generar el video
-            for i, processed_path in enumerate(processed_images):
-                print(f"Generando clip {i+1} de {len(processed_images)}")
-                duration = self.options.get('durations', {}).get(self.image_files[i], Config.DEFAULT_IMAGE_DURATION)
+            # Paso 2: Generar clips
+            for i, processed_path in enumerate(processed_images, 1):
+                send_progress(
+                    40 + (i / len(processed_images)) * 30,  # 40-70%
+                    f"Generando clip {i}/{len(processed_images)}"
+                )
+                duration = self.options.get('durations', {}).get(self.image_files[i-1], Config.DEFAULT_IMAGE_DURATION)
                 clip = ImageClip(processed_path)
                 clip = clip.set_duration(duration)
                 
-                if i > 0:
+                if i > 1:
                     transition = self.options.get('transitions', {}).get(str(i), 'fade')
                     if transition in self.transitions:
-                        print(f"Aplicando transición: {transition}")
+                        send_progress(
+                            40 + (i / len(processed_images)) * 30,
+                            f"Aplicando transición {transition} al clip {i}"
+                        )
                         clips.extend(self.create_transition(clips[-1], clip, transition))
                     else:
-                        print("Aplicando transición por defecto: fade")
                         clips.extend(self.create_transition(clips[-1], clip, 'fade'))
                 else:
                     clips.append(clip)
-                
-                current_step += 1
-                progress = int((current_step / total_steps) * 100)
-                print(f"Progreso: {progress}%")
-                progress_callback(progress)
                 
                 # Limpiar imagen procesada
                 try:
@@ -216,17 +226,17 @@ class VideoGenerator:
                 except:
                     pass
 
-            print("Concatenando clips...")
+            send_progress(70, "Concatenando clips...")
             final_clip = concatenate_videoclips(clips, method='compose')
             
             # Añadir audio
-            print("Procesando audio...")
+            send_progress(80, "Procesando audio...")
             audio_path = os.path.join(app.config['UPLOAD_FOLDER'], 'music', self.audio_file)
             audio = AudioFileClip(audio_path)
             
             audio_start = self.options.get('audio_start', 0)
             if audio_start > 0:
-                print(f"Ajustando tiempo de inicio del audio: {audio_start}s")
+                send_progress(85, f"Ajustando tiempo de inicio del audio: {audio_start}s")
                 audio = audio.subclip(audio_start)
                 
             total_duration = final_clip.duration
@@ -238,7 +248,7 @@ class VideoGenerator:
             output_filename = VideoUtils.generate_unique_filename(f"video.{Config.OUTPUT_FORMAT}")
             output_path = os.path.join(app.config['UPLOAD_FOLDER'], 'output', output_filename)
             
-            print("Escribiendo video final...")
+            send_progress(90, "Escribiendo video final...")
             final_clip.write_videofile(
                 output_path, 
                 fps=Config.FPS, 
@@ -247,16 +257,12 @@ class VideoGenerator:
                 verbose=False,
                 logger=None
             )
-            print("Video generado con éxito!")
-            progress_callback(100)
             
-            # Limpiar archivos temporales después de generar el video
-            self._cleanup_temp_files()
-            
+            send_progress(100, "¡Video completado!")
             return output_filename
+            
         except Exception as e:
-            # Si algo falla, asegurarnos de limpiar los archivos temporales
-            self._cleanup_temp_files()
+            send_progress(0, f"Error: {str(e)}")
             raise e
 
     def _cleanup_temp_files(self):
@@ -331,10 +337,6 @@ def generate_video():
         return jsonify({'error': 'Faltan imágenes o audio'}), 400
 
     try:
-        def progress_callback(progress):
-            print(f"Progress: {progress}%")
-        
-        options['progress_callback'] = progress_callback
         generator = VideoGenerator(image_files, audio_file, options)
         output_filename = generator.generate()
         
@@ -392,6 +394,22 @@ def cleanup():
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/progress')
+def progress():
+    def generate():
+        while True:
+            try:
+                progress_data = progress_queue.get(timeout=30)  # 30 segundos timeout
+                yield f"data: {json.dumps(progress_data)}\n\n"
+            except queue.Empty:
+                # Si no hay actualizaciones en 30 segundos, cerrar la conexión
+                break
+    
+    return Response(
+        stream_with_context(generate()),
+        mimetype='text/event-stream'
+    )
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

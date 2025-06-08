@@ -9,65 +9,56 @@
     <link href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css" rel="stylesheet">
     <style>
         body {
-            background-color: #f8f9fa;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            min-height: 100vh;
         }
         .main-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
+            max-width: 100%;
+            padding: 1rem;
         }
         .drag-area {
-            border: 3px dashed #dee2e6;
-            border-radius: 15px;
-            min-height: 200px;
+            border: 2px dashed #444;
+            border-radius: 8px;
+            min-height: 150px;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-direction: column;
             transition: all 0.3s ease;
-            background: white;
+            background: #2d2d2d;
             cursor: pointer;
         }
         .drag-area.active {
             border-color: #0d6efd;
-            background-color: #e7f1ff;
-        }
-        .drag-area i {
-            font-size: 3rem;
-            color: #6c757d;
-            margin-bottom: 1rem;
+            background-color: #2d2d2d;
         }
         .preview-container {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-top: 1.5rem;
-            padding: 1rem;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
         }
         .preview-item {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            background: #2d2d2d;
+            border-radius: 8px;
             overflow: hidden;
-            transition: transform 0.2s;
-        }
-        .preview-item:hover {
-            transform: translateY(-5px);
+            border: 1px solid #444;
         }
         .preview-image {
             width: 100%;
-            height: 200px;
+            height: 150px;
             object-fit: cover;
         }
         .preview-controls {
-            padding: 1rem;
+            padding: 0.75rem;
         }
         .handle {
             padding: 0.5rem;
-            background: #f8f9fa;
+            background: #383838;
             text-align: center;
             cursor: move;
-            color: #6c757d;
+            color: #aaa;
         }
         .transition-selector {
             display: grid;
@@ -75,181 +66,206 @@
             gap: 0.5rem;
             margin-top: 0.5rem;
         }
-        .transition-selector .btn {
-            padding: 0.375rem;
+        .card {
+            background: #2d2d2d;
+            border: 1px solid #444;
+        }
+        .card-body {
+            padding: 1rem;
+        }
+        .form-control, .form-control:focus {
+            background: #383838;
+            border-color: #444;
+            color: #e0e0e0;
+        }
+        .form-control:focus {
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+        .console-output {
+            background: #1e1e1e;
+            border: 1px solid #444;
+            border-radius: 8px;
+            font-family: 'Consolas', monospace;
+            color: #e0e0e0;
+            height: calc(100vh - 2rem);
+            overflow-y: auto;
+            padding: 1rem;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+        .console-output p {
+            margin: 0;
+            padding: 2px 0;
+            font-family: 'Consolas', monospace;
+        }
+        .console-output .info { color: #3498db; }
+        .console-output .success { color: #2ecc71; }
+        .console-output .warning { color: #f1c40f; }
+        .console-output .error { color: #e74c3c; }
+        .console-output .debug { color: #9b59b6; }
+        .console-output .system { color: #e67e22; }
+        .console-output .progress { color: #1abc9c; }
+        
+        .progress-container {
+            background: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .progress-bar {
+            transition: width 0.3s ease;
+            background-color: #2ecc71;
+        }
+        .progress-detail {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+            color: #aaa;
+        }
+        .status-bar {
+            background: #383838;
+            border-radius: 8px;
+            padding: 0.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
             font-size: 0.875rem;
         }
-        .transition-selector .btn.selected {
-            background-color: #0d6efd;
-            color: white;
-        }
-        .audio-controls {
-            background: white;
-            border-radius: 15px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            margin: 1.5rem 0;
-        }
-        .progress-container {
-            background: white;
-            border-radius: 15px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            margin: 1.5rem 0;
-            display: none;
-        }
-        .progress-container.active {
-            display: block;
-        }
-        .progress {
-            height: 1.5rem;
-            margin: 1rem 0;
-        }
-        .progress-status {
-            margin-top: 1rem;
-            padding: 1rem;
-            background: #f8f9fa;
-            border-radius: 10px;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-        .progress-status p {
-            margin: 0;
-            padding: 0.25rem 0;
-            font-family: monospace;
-        }
-        .progress-status p:last-child {
-            color: #0d6efd;
-            font-weight: bold;
-        }
-        .video-preview {
-            background: white;
-            border-radius: 15px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            margin: 1.5rem 0;
+        .status-indicator i {
+            font-size: 1rem;
         }
         .video-list {
-            background: white;
-            border-radius: 15px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            background: #2d2d2d;
+            border-radius: 8px;
+            height: calc(100vh - 2rem);
+            overflow-y: auto;
         }
         .video-list .list-group-item {
-            border: none;
-            border-radius: 10px;
+            background: #383838;
+            border: 1px solid #444;
+            color: #e0e0e0;
             margin-bottom: 0.5rem;
-            background: #f8f9fa;
         }
         .video-list .list-group-item:hover {
-            background: #e9ecef;
+            background: #444;
         }
         .btn-generate {
-            padding: 1rem 2rem;
-            font-size: 1.25rem;
-            border-radius: 50px;
+            background: #2ecc71;
+            border: none;
+            padding: 0.75rem 1.5rem;
+        }
+        .btn-generate:hover {
+            background: #27ae60;
+        }
+        .btn-generate:disabled {
+            background: #95a5a6;
+        }
+        .technical-info {
+            font-family: 'Consolas', monospace;
+            font-size: 0.75rem;
+            color: #666;
+            margin-top: 0.25rem;
         }
     </style>
 </head>
 <body>
     <div class="main-container">
-        <h1 class="text-center mb-4">Generador de Videos para TikTok</h1>
-        
-        <div class="row g-4">
-            <div class="col-lg-8">
-                <div class="card shadow-sm">
+        <div class="row g-3">
+            <!-- Panel izquierdo: Subida y configuración -->
+            <div class="col-lg-3">
+                <div class="card mb-3">
                     <div class="card-body">
-                        <h5 class="card-title mb-3">
+                        <h5 class="card-title">
                             <i class="fas fa-images me-2"></i>Imágenes
                         </h5>
                         <div class="drag-area" id="drag-area">
                             <i class="fas fa-cloud-upload-alt"></i>
-                            <p class="mb-2">Arrastra y suelta imágenes aquí o</p>
-                            <button class="btn btn-primary px-4" onclick="document.getElementById('file-input').click()">
-                                Seleccionar archivos
+                            <p class="mb-2">Arrastra imágenes aquí</p>
+                            <button class="btn btn-sm btn-primary" onclick="document.getElementById('file-input').click()">
+                                Seleccionar
                             </button>
                             <input type="file" id="file-input" multiple accept="image/*" class="d-none">
                         </div>
-                        <div id="preview" class="preview-container"></div>
                     </div>
                 </div>
 
-                <div class="audio-controls">
-                    <h5 class="mb-3">
-                        <i class="fas fa-music me-2"></i>Audio
-                    </h5>
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Seleccionar música</label>
-                            <div class="input-group">
-                                <input type="file" id="audio-input" accept=".mp3,.wav,.m4a" class="form-control">
-                            </div>
-                            <small class="text-muted" id="audio-name">Ningún archivo seleccionado</small>
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-music me-2"></i>Audio
+                        </h5>
+                        <div class="mb-3">
+                            <label class="form-label">Música</label>
+                            <input type="file" id="audio-input" accept=".mp3,.wav,.m4a" class="form-control form-control-sm">
+                            <small class="text-muted" id="audio-name">Sin archivo</small>
                         </div>
-                        <div class="col-md-3">
+                        <div class="mb-3">
                             <label class="form-label">Volumen</label>
                             <input type="range" class="form-range" id="audioVolume" min="0" max="1" step="0.1" value="1">
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Inicio (segundos)</label>
-                            <input type="number" class="form-control" id="audioStart" value="0" min="0">
+                        <div class="mb-3">
+                            <label class="form-label">Inicio (s)</label>
+                            <input type="number" class="form-control form-control-sm" id="audioStart" value="0" min="0">
                         </div>
                     </div>
                 </div>
 
-                <div class="text-center">
-                    <button id="generate-btn" class="btn btn-success btn-generate" disabled>
-                        <i class="fas fa-magic me-2"></i>Generar Video
-                    </button>
+                <button id="generate-btn" class="btn btn-generate w-100" disabled>
+                    <i class="fas fa-magic me-2"></i>Generar Video
+                </button>
+            </div>
+
+            <!-- Panel central: Preview y configuración de imágenes -->
+            <div class="col-lg-6">
+                <div class="status-bar">
+                    <div class="status-indicator">
+                        <i class="fas fa-images"></i>
+                        <span id="imageCount">0 imágenes</span>
+                    </div>
+                    <div class="status-indicator">
+                        <i class="fas fa-clock"></i>
+                        <span id="totalDuration">0s duración</span>
+                    </div>
+                    <div class="status-indicator">
+                        <i class="fas fa-music"></i>
+                        <span id="audioStatus">Sin audio</span>
+                    </div>
                 </div>
 
-                <div id="progressContainer" class="progress-container">
-                    <h5 class="mb-3">
-                        <i class="fas fa-cog fa-spin me-2"></i>Progreso
-                    </h5>
-                    <div class="progress">
-                        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
-                    </div>
-                    <div id="progressStatus" class="progress-status">
-                        <p>Esperando para comenzar...</p>
-                    </div>
-                </div>
+                <div id="preview" class="preview-container mb-3"></div>
 
-                <div id="videoPreviewContainer" class="video-preview d-none">
-                    <h5 class="mb-3">
-                        <i class="fas fa-play-circle me-2"></i>Vista previa
-                    </h5>
+                <div id="videoPreviewContainer" class="d-none">
                     <video id="videoPreview" controls class="w-100 rounded">
-                        Tu navegador no soporta la reproducción de video.
+                        Tu navegador no soporta video.
                     </video>
                 </div>
             </div>
 
-            <div class="col-lg-4">
-                <div class="video-list">
-                    <h5 class="mb-3">
-                        <i class="fas fa-film me-2"></i>Videos Generados
-                    </h5>
-                    <div id="videosList" class="list-group">
-                        {% for video in videos %}
-                        <div class="list-group-item">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="text-truncate me-2">
-                                    <i class="fas fa-video me-2"></i>
-                                    {{ video }}
-                                </div>
-                                <div class="btn-group">
-                                    <button class="btn btn-sm btn-outline-primary" onclick="previewVideo('{{ video }}')">
-                                        <i class="fas fa-play"></i>
-                                    </button>
-                                    <a href="/download/{{ video }}" class="btn btn-sm btn-outline-success" download>
-                                        <i class="fas fa-download"></i>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
+            <!-- Panel derecho: Consola y videos generados -->
+            <div class="col-lg-3">
+                <div class="progress-container">
+                    <div class="progress" style="height: 20px;">
+                        <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                     </div>
+                    <div class="progress-detail">
+                        <span id="progressText">0%</span>
+                        <span id="progressPhase">Esperando...</span>
+                    </div>
+                </div>
+                <div class="console-output" id="consoleOutput">
+                    <p class="system">[Sistema] Iniciando aplicación...</p>
+                    <p class="debug">[Config] Resolución: 1080x1920</p>
+                    <p class="debug">[Config] FPS: 30</p>
+                    <p class="debug">[Config] Duración transición: 0.5s</p>
                 </div>
             </div>
         </div>
@@ -261,14 +277,7 @@
     <script>
         const notyf = new Notyf({
             duration: 3000,
-            position: { x: 'right', y: 'top' },
-            types: [
-                {
-                    type: 'info',
-                    background: '#0dcaf0',
-                    icon: false
-                }
-            ]
+            position: { x: 'right', y: 'top' }
         });
 
         let uploadedImages = [];
@@ -278,31 +287,89 @@
         const audioInput = document.getElementById('audio-input');
         const preview = document.getElementById('preview');
         const generateBtn = document.getElementById('generate-btn');
-        const progressContainer = document.getElementById('progressContainer');
-        const progressBar = document.getElementById('progressBar');
-        const progressStatus = document.getElementById('progressStatus');
+        const consoleOutput = document.getElementById('consoleOutput');
         const videoPreviewContainer = document.getElementById('videoPreviewContainer');
         const videoPreview = document.getElementById('videoPreview');
 
-        // Hacer el contenedor de imágenes ordenable
+        let progressSource = null;
+
+        function updateStatusBar() {
+            document.getElementById('imageCount').textContent = `${uploadedImages.length} imágenes`;
+            const totalDuration = uploadedImages.reduce((acc, img) => acc + img.duration, 0);
+            document.getElementById('totalDuration').textContent = `${totalDuration}s duración`;
+            document.getElementById('audioStatus').textContent = audioFile ? audioFile.name : 'Sin audio';
+        }
+
+        function updateProgress(progress, message) {
+            const progressBar = document.querySelector('.progress-bar');
+            const progressText = document.querySelector('.progress-detail');
+            
+            if (progressBar && progressText) {
+                progressBar.style.width = `${progress}%`;
+                progressText.textContent = `${progress}% - ${message}`;
+            }
+            
+            const consoleOutput = document.querySelector('.console-output');
+            if (consoleOutput) {
+                const logEntry = document.createElement('div');
+                logEntry.className = 'log-entry';
+                
+                if (message.toLowerCase().includes('error')) {
+                    logEntry.classList.add('error');
+                } else if (progress === 100) {
+                    logEntry.classList.add('success');
+                } else {
+                    logEntry.classList.add('progress');
+                }
+                
+                const timestamp = new Date().toLocaleTimeString();
+                logEntry.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${message}`;
+                
+                consoleOutput.appendChild(logEntry);
+                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            }
+        }
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const p = document.createElement('p');
+            p.className = type;
+            
+            // Detectar mensajes de progreso del backend
+            if (message.includes('%')) {
+                const percentMatch = message.match(/(\d+)%/);
+                if (percentMatch) {
+                    const percent = parseInt(percentMatch[1]);
+                    updateProgress(percent, message.replace(/\[\d+%\]/, '').trim());
+                }
+            }
+            
+            p.textContent = `[${timestamp}] ${message}`;
+            consoleOutput.appendChild(p);
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+
         new Sortable(preview, {
             animation: 150,
             handle: '.handle',
-            onEnd: updateTransitionSelectors
+            onEnd: () => {
+                updateTransitionSelectors();
+                log('[Orden] Imágenes reordenadas', 'debug');
+            }
         });
 
-        // Manejadores de drag and drop
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dragArea.addEventListener(eventName, preventDefaults, false);
+            dragArea.addEventListener(eventName, e => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
         });
-
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
 
         ['dragenter', 'dragover'].forEach(eventName => {
-            dragArea.addEventListener(eventName, () => dragArea.classList.add('active'));
+            dragArea.addEventListener(eventName, () => {
+                dragArea.classList.add('active');
+                log('[DragDrop] Arrastrando imágenes...', 'debug');
+            });
         });
 
         ['dragleave', 'drop'].forEach(eventName => {
@@ -315,18 +382,11 @@
         audioInput.addEventListener('change', function() {
             if (this.files.length > 0) {
                 audioFile = this.files[0];
-                document.getElementById('audio-name').textContent = audioFile.name;
+                log(`[Audio] Seleccionado: ${audioFile.name} (${(audioFile.size / 1024 / 1024).toFixed(2)}MB)`, 'info');
+                updateStatusBar();
                 updateGenerateButton();
-                notyf.success('Audio seleccionado');
             }
         });
-
-        function addProgressLog(message) {
-            const p = document.createElement('p');
-            p.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
-            progressStatus.appendChild(p);
-            progressStatus.scrollTop = progressStatus.scrollHeight;
-        }
 
         function handleFiles(files) {
             [...files].forEach(file => {
@@ -336,10 +396,11 @@
                         duration: 3,
                         transition: 'fade'
                     });
+                    log(`[Imagen] Añadida: ${file.name} (${(file.size / 1024).toFixed(2)}KB)`, 'info');
                     displayImage(uploadedImages.length - 1);
-                    notyf.success('Imagen añadida');
                 }
             });
+            updateStatusBar();
             updateGenerateButton();
         }
 
@@ -363,79 +424,70 @@
                 const controls = document.createElement('div');
                 controls.className = 'preview-controls';
                 
-                const durationGroup = document.createElement('div');
-                durationGroup.className = 'mb-3';
-                
-                const durationLabel = document.createElement('label');
-                durationLabel.className = 'form-label';
-                durationLabel.textContent = 'Duración (segundos)';
-                
                 const durationInput = document.createElement('input');
                 durationInput.type = 'number';
-                durationInput.className = 'form-control';
+                durationInput.className = 'form-control form-control-sm mb-2';
                 durationInput.value = imageData.duration;
                 durationInput.min = 1;
                 durationInput.max = 10;
                 durationInput.addEventListener('change', () => {
                     imageData.duration = parseInt(durationInput.value);
+                    updateStatusBar();
+                    log(`[Config] Duración imagen ${index + 1} cambiada a ${durationInput.value}s`, 'debug');
                 });
                 
-                durationGroup.appendChild(durationLabel);
-                durationGroup.appendChild(durationInput);
-                controls.appendChild(durationGroup);
-                
                 if (index < uploadedImages.length - 1) {
-                    const transitionGroup = document.createElement('div');
-                    transitionGroup.className = 'mb-3';
-                    
-                    const transitionLabel = document.createElement('label');
-                    transitionLabel.className = 'form-label';
-                    transitionLabel.textContent = 'Transición';
-                    
                     const transitionSelector = document.createElement('div');
                     transitionSelector.className = 'transition-selector';
                     
                     const transitions = {
-                        'fade': ['fa-fade', 'Desvanecer'],
-                        'zoom_in': ['fa-search-plus', 'Acercar'],
-                        'zoom_out': ['fa-search-minus', 'Alejar'],
+                        'fade': ['fa-fade', 'Fade'],
+                        'zoom_in': ['fa-search-plus', 'Zoom+'],
+                        'zoom_out': ['fa-search-minus', 'Zoom-'],
                         'rotate': ['fa-sync', 'Rotar']
                     };
 
                     Object.entries(transitions).forEach(([type, [icon, text]]) => {
                         const btn = document.createElement('button');
                         btn.className = `btn btn-sm btn-outline-primary ${imageData.transition === type ? 'selected' : ''}`;
-                        btn.innerHTML = `<i class="fas ${icon}"></i> ${text}`;
+                        btn.innerHTML = `<i class="fas ${icon}"></i>`;
+                        btn.title = text;
                         btn.onclick = () => {
                             transitionSelector.querySelectorAll('.btn').forEach(b => b.classList.remove('selected'));
                             btn.classList.add('selected');
                             imageData.transition = type;
+                            log(`[Config] Transición ${index + 1} cambiada a ${text}`, 'debug');
                         };
                         transitionSelector.appendChild(btn);
                     });
                     
-                    transitionGroup.appendChild(transitionLabel);
-                    transitionGroup.appendChild(transitionSelector);
-                    controls.appendChild(transitionGroup);
+                    controls.appendChild(transitionSelector);
                 }
                 
                 const removeBtn = document.createElement('button');
-                removeBtn.className = 'btn btn-danger w-100';
-                removeBtn.innerHTML = '<i class="fas fa-trash"></i> Eliminar';
+                removeBtn.className = 'btn btn-danger btn-sm w-100 mt-2';
+                removeBtn.innerHTML = '<i class="fas fa-trash"></i>';
                 removeBtn.onclick = () => {
                     uploadedImages.splice(index, 1);
                     container.remove();
                     updateTransitionSelectors();
+                    updateStatusBar();
                     updateGenerateButton();
-                    notyf.error('Imagen eliminada');
+                    log(`[Imagen] Eliminada imagen ${index + 1}`, 'warning');
                 };
                 
+                controls.appendChild(durationInput);
                 controls.appendChild(removeBtn);
                 
                 container.appendChild(handle);
                 container.appendChild(img);
                 container.appendChild(controls);
                 preview.appendChild(container);
+
+                const technical = document.createElement('div');
+                technical.className = 'technical-info';
+                technical.textContent = `${imageData.file.name} (${(imageData.file.size / 1024).toFixed(2)}KB)`;
+                container.appendChild(technical);
             };
             
             reader.readAsDataURL(imageData.file);
@@ -450,12 +502,6 @@
             generateBtn.disabled = uploadedImages.length === 0 || !audioFile;
         }
 
-        function updateProgress(progress) {
-            progressContainer.classList.add('active');
-            progressBar.style.width = `${progress}%`;
-            progressBar.setAttribute('aria-valuenow', progress);
-        }
-
         function previewVideo(filename) {
             videoPreviewContainer.classList.remove('d-none');
             videoPreview.src = `/preview/${filename}`;
@@ -465,114 +511,136 @@
         async function cleanupFiles() {
             try {
                 await fetch('/cleanup', { method: 'POST' });
+                log('[Sistema] Limpieza de archivos temporales', 'info');
             } catch (error) {
-                console.error('Error al limpiar archivos:', error);
+                log('[Error] Limpieza de archivos: ' + error.message, 'error');
             }
         }
 
         window.addEventListener('beforeunload', cleanupFiles);
 
+        function connectToProgressUpdates() {
+            if (progressSource) {
+                progressSource.close();
+            }
+            
+            progressSource = new EventSource('/progress');
+            
+            progressSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                updateProgress(data.progress, data.message);
+            };
+            
+            progressSource.onerror = function() {
+                progressSource.close();
+                progressSource = null;
+            };
+        }
+
         generateBtn.addEventListener('click', async function() {
             generateBtn.disabled = true;
-            progressContainer.classList.add('active');
-            progressStatus.innerHTML = '';
-            updateProgress(0);
-            addProgressLog('Iniciando generación del video...');
+            updateProgress(0, 'Iniciando...');
+            log('[Proceso] Iniciando generación del video...', 'info');
 
             const formData = new FormData();
-            uploadedImages.forEach(({file}) => {
-                formData.append('images[]', file);
-            });
+            const options = {
+                durations: {},
+                transitions: {},
+                audio_start: parseFloat(document.getElementById('audioStart').value) || 0,
+                audio_volume: parseFloat(document.getElementById('audioVolume').value) || 1.0
+            };
+
+            // Limpiar la consola
+            const consoleOutput = document.querySelector('.console-output');
+            if (consoleOutput) {
+                consoleOutput.innerHTML = '';
+            }
+            
+            // Resetear la barra de progreso
+            const progressBar = document.querySelector('.progress-bar');
+            const progressText = document.querySelector('.progress-detail');
+            if (progressBar && progressText) {
+                progressBar.style.width = '0%';
+                progressText.textContent = 'Iniciando generación...';
+            }
+
+            // Conectar a las actualizaciones de progreso
+            connectToProgressUpdates();
 
             try {
-                addProgressLog('Subiendo imágenes...');
-                const imageResponse = await fetch('/upload_images', {
+                // Subir imágenes
+                for (const img of uploadedImages) {
+                    formData.append('images[]', img.file);
+                    options.durations[img.file.name] = img.duration;
+                    if (img.transition) {
+                        options.transitions[uploadedImages.indexOf(img) + 1] = img.transition;
+                    }
+                }
+
+                // Subir audio si existe
+                const audioFile = document.getElementById('audio-input').files[0];
+                if (audioFile) {
+                    formData.append('audio', audioFile);
+                }
+
+                formData.append('options', JSON.stringify(options));
+
+                const response = await fetch('/generate', {
                     method: 'POST',
                     body: formData
                 });
-                const imageData = await imageResponse.json();
 
-                addProgressLog('Subiendo audio...');
-                const audioFormData = new FormData();
-                audioFormData.append('audio', audioFile);
-                const audioResponse = await fetch('/upload_audio', {
-                    method: 'POST',
-                    body: audioFormData
-                });
-                const audioData = await audioResponse.json();
-
-                const options = {
-                    durations: {},
-                    transitions: {},
-                    audio_volume: parseFloat(document.getElementById('audioVolume').value),
-                    audio_start: parseFloat(document.getElementById('audioStart').value)
-                };
-
-                uploadedImages.forEach((img, index) => {
-                    options.durations[imageData.filenames[index]] = img.duration;
-                    if (index < uploadedImages.length - 1) {
-                        options.transitions[index + 1] = img.transition;
-                    }
-                });
-
-                addProgressLog('Generando video...');
-                const generateResponse = await fetch('/generate_video', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        images: imageData.filenames,
-                        audio: audioData.filename,
-                        options: options
-                    })
-                });
-                const generateData = await generateResponse.json();
-
-                if (generateData.success) {
-                    addProgressLog('¡Video generado con éxito!');
-                    notyf.success('¡Video generado con éxito!');
-                    
-                    const videosResponse = await fetch('/videos');
-                    const videosData = await videosResponse.json();
-                    updateVideosList(videosData.videos);
-                    previewVideo(generateData.video_path);
-                    
-                    await cleanupFiles();
-                } else {
-                    addProgressLog('Error: ' + generateData.error);
-                    notyf.error('Error al generar el video: ' + generateData.error);
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
                 }
+
+                const result = await response.json();
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+
+                // Cerrar la conexión de progreso
+                if (progressSource) {
+                    progressSource.close();
+                    progressSource = null;
+                }
+
+                // Actualizar la lista de videos
+                updateVideosList();
+                
             } catch (error) {
-                addProgressLog('Error: ' + error.message);
-                notyf.error('Error: ' + error.message);
+                updateProgress(0, `Error: ${error.message}`);
             } finally {
                 generateBtn.disabled = false;
-                updateProgress(100);
             }
         });
 
         function updateVideosList(videos) {
             const videosList = document.getElementById('videosList');
-            videosList.innerHTML = videos.map(video => `
-                <div class="list-group-item">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="text-truncate me-2">
-                            <i class="fas fa-video me-2"></i>
-                            ${video}
-                        </div>
-                        <div class="btn-group">
-                            <button class="btn btn-sm btn-outline-primary" onclick="previewVideo('${video}')">
-                                <i class="fas fa-play"></i>
-                            </button>
-                            <a href="/download/${video}" class="btn btn-sm btn-outline-success" download>
-                                <i class="fas fa-download"></i>
-                            </a>
+            if (videosList) {
+                videosList.innerHTML = videos.map(video => `
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-truncate me-2">
+                                <i class="fas fa-video me-2"></i>
+                                ${video}
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-outline-primary" onclick="previewVideo('${video}')">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                                <a href="/download/${video}" class="btn btn-sm btn-outline-success" download>
+                                    <i class="fas fa-download"></i>
+                                </a>
+                            </div>
                         </div>
                     </div>
-                </div>
-            `).join('');
+                `).join('');
+            }
         }
+
+        // Inicialización
+        log('[Sistema] Aplicación lista', 'success');
     </script>
 </body>
 </html>
