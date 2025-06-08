@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Videos para Vinted</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css" rel="stylesheet">
+    <style>
+        .drag-area {
+            border: 2px dashed #6c757d;
+            min-height: 200px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+        .drag-area.active {
+            border-color: #0d6efd;
+            background-color: #e7f1ff;
+        }
+        .preview-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-top: 15px;
+            padding: 20px;
+        }
+        .preview-item {
+            position: relative;
+            width: 150px;
+        }
+        .preview-image {
+            width: 150px;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .preview-controls {
+            background: rgba(255,255,255,0.9);
+            padding: 8px;
+            border-radius: 8px;
+            margin-top: 5px;
+        }
+        .video-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .progress-bar {
+            transition: width 0.5s ease;
+        }
+        .transition-preview {
+            width: 40px;
+            height: 40px;
+            margin: 2px;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .transition-preview.selected {
+            border-color: #0d6efd;
+        }
+        #videoPreview {
+            width: 100%;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        .transition-selector {
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            width: 50px;
+            margin-left: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .transition-selector .btn {
+            padding: 5px;
+            width: 100%;
+        }
+        .transition-selector .btn.selected {
+            background-color: #0d6efd;
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container py-5">
+        <h1 class="text-center mb-5">Generador de Videos para Vinted</h1>
+        
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Generador de Videos -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">1. Sube tus imágenes</h5>
+                        <div class="drag-area p-4" id="drag-area">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                            <p class="mb-2">Arrastra y suelta imágenes aquí o</p>
+                            <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
+                                <i class="fas fa-images me-2"></i>Selecciona archivos
+                            </button>
+                            <input type="file" id="file-input" multiple accept="image/*" class="d-none">
+                        </div>
+                        <div id="preview" class="preview-container"></div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">2. Personaliza las transiciones</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label">Duración por defecto (segundos)</label>
+                                <input type="number" class="form-control" id="defaultDuration" value="3" min="1" max="10">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Volumen de música</label>
+                                <input type="range" class="form-range" id="audioVolume" min="0" max="1" step="0.1" value="1">
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <label class="form-label">Transiciones disponibles</label>
+                            <div class="d-flex flex-wrap" id="transitionPreviews">
+                                <div class="transition-preview selected" data-transition="fade">
+                                    <i class="fas fa-fade fa-2x"></i>
+                                </div>
+                                <div class="transition-preview" data-transition="slide_left">
+                                    <i class="fas fa-arrow-left fa-2x"></i>
+                                </div>
+                                <div class="transition-preview" data-transition="slide_right">
+                                    <i class="fas fa-arrow-right fa-2x"></i>
+                                </div>
+                                <div class="transition-preview" data-transition="zoom_in">
+                                    <i class="fas fa-search-plus fa-2x"></i>
+                                </div>
+                                <div class="transition-preview" data-transition="zoom_out">
+                                    <i class="fas fa-search-minus fa-2x"></i>
+                                </div>
+                                <div class="transition-preview" data-transition="rotate">
+                                    <i class="fas fa-sync fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">3. Añade música</h5>
+                        <div class="d-flex align-items-center">
+                            <input type="file" id="audio-input" accept=".mp3,.wav,.m4a" class="d-none">
+                            <button class="btn btn-secondary me-3" onclick="document.getElementById('audio-input').click()">
+                                <i class="fas fa-music me-2"></i>Seleccionar música
+                            </button>
+                            <span id="audio-name" class="text-muted">Ningún archivo seleccionado</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center mb-4">
+                    <button id="generate-btn" class="btn btn-success btn-lg" disabled>
+                        <i class="fas fa-video me-2"></i>Generar Video
+                    </button>
+                </div>
+
+                <div class="progress mb-3 d-none" id="progressBar">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                </div>
+
+                <div id="videoPreviewContainer" class="d-none">
+                    <video id="videoPreview" controls>
+                        Tu navegador no soporta la reproducción de video.
+                    </video>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-film me-2"></i>Videos Generados
+                        </h5>
+                    </div>
+                    <div class="card-body video-list">
+                        <div class="list-group" id="videosList">
+                            {% for video in videos %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-video me-2"></i>
+                                        {{ video }}
+                                    </div>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-primary me-2" onclick="previewVideo('{{ video }}')">
+                                            <i class="fas fa-play"></i>
+                                        </button>
+                                        <a href="/download/{{ video }}" class="btn btn-sm btn-outline-success">
+                                            <i class="fas fa-download"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
+    <script>
+        const notyf = new Notyf({
+            duration: 3000,
+            position: { x: 'right', y: 'top' }
+        });
+
+        let uploadedImages = [];
+        let audioFile = null;
+        let selectedTransition = 'fade';
+        const dragArea = document.getElementById('drag-area');
+        const fileInput = document.getElementById('file-input');
+        const audioInput = document.getElementById('audio-input');
+        const preview = document.getElementById('preview');
+        const generateBtn = document.getElementById('generate-btn');
+        const progressBar = document.getElementById('progressBar');
+        const progressBarInner = progressBar.querySelector('.progress-bar');
+        const videoPreviewContainer = document.getElementById('videoPreviewContainer');
+        const videoPreview = document.getElementById('videoPreview');
+
+        // Manejadores de drag and drop
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dragArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dragArea.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dragArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight() {
+            dragArea.classList.add('active');
+        }
+
+        function unhighlight() {
+            dragArea.classList.remove('active');
+        }
+
+        dragArea.addEventListener('drop', handleDrop, false);
+
+        // Manejadores de transiciones
+        document.querySelectorAll('.transition-preview').forEach(preview => {
+            preview.addEventListener('click', () => {
+                document.querySelectorAll('.transition-preview').forEach(p => p.classList.remove('selected'));
+                preview.classList.add('selected');
+                selectedTransition = preview.dataset.transition;
+            });
+        });
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+
+        fileInput.addEventListener('change', function() {
+            handleFiles(this.files);
+        });
+
+        audioInput.addEventListener('change', function() {
+            if (this.files.length > 0) {
+                audioFile = this.files[0];
+                document.getElementById('audio-name').textContent = audioFile.name;
+                updateGenerateButton();
+            }
+        });
+
+        function handleFiles(files) {
+            [...files].forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    uploadedImages.push({
+                        file: file,
+                        duration: parseInt(document.getElementById('defaultDuration').value),
+                        transition: selectedTransition
+                    });
+                    displayImage(file, uploadedImages.length - 1);
+                }
+            });
+            updateGenerateButton();
+        }
+
+        function displayImage(file, index) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const container = document.createElement('div');
+                container.className = 'preview-item';
+                
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.className = 'preview-image';
+                
+                const controls = document.createElement('div');
+                controls.className = 'preview-controls';
+                
+                const durationInput = document.createElement('input');
+                durationInput.type = 'number';
+                durationInput.className = 'form-control form-control-sm mb-2';
+                durationInput.value = uploadedImages[index].duration;
+                durationInput.min = 1;
+                durationInput.max = 10;
+                durationInput.addEventListener('change', () => {
+                    uploadedImages[index].duration = parseInt(durationInput.value);
+                });
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'btn btn-danger btn-sm w-100';
+                removeBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                removeBtn.onclick = () => {
+                    uploadedImages.splice(index, 1);
+                    container.remove();
+                    updateTransitionSelectors();
+                    updateGenerateButton();
+                };
+                
+                controls.appendChild(durationInput);
+                controls.appendChild(removeBtn);
+                container.appendChild(img);
+                container.appendChild(controls);
+
+                // Añadir selector de transición si no es la última imagen
+                if (index < uploadedImages.length - 1) {
+                    const transitionSelector = document.createElement('div');
+                    transitionSelector.className = 'transition-selector';
+                    
+                    const transitions = {
+                        'fade': 'fa-fade',
+                        'slide_left': 'fa-arrow-left',
+                        'slide_right': 'fa-arrow-right',
+                        'zoom_in': 'fa-search-plus',
+                        'zoom_out': 'fa-search-minus',
+                        'rotate': 'fa-sync'
+                    };
+
+                    Object.entries(transitions).forEach(([type, icon]) => {
+                        const btn = document.createElement('button');
+                        btn.className = `btn btn-sm btn-outline-primary ${uploadedImages[index].transition === type ? 'selected' : ''}`;
+                        btn.innerHTML = `<i class="fas ${icon}"></i>`;
+                        btn.onclick = () => {
+                            transitionSelector.querySelectorAll('.btn').forEach(b => b.classList.remove('selected'));
+                            btn.classList.add('selected');
+                            uploadedImages[index].transition = type;
+                        };
+                        transitionSelector.appendChild(btn);
+                    });
+
+                    container.appendChild(transitionSelector);
+                }
+
+                preview.appendChild(container);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function updateTransitionSelectors() {
+            // Limpiar y volver a mostrar todas las imágenes
+            preview.innerHTML = '';
+            uploadedImages.forEach((img, index) => {
+                displayImage(img.file, index);
+            });
+        }
+
+        function updateGenerateButton() {
+            generateBtn.disabled = uploadedImages.length === 0 || !audioFile;
+        }
+
+        function updateProgress(progress) {
+            progressBar.classList.remove('d-none');
+            progressBarInner.style.width = `${progress}%`;
+            progressBarInner.setAttribute('aria-valuenow', progress);
+        }
+
+        function previewVideo(filename) {
+            videoPreviewContainer.classList.remove('d-none');
+            videoPreview.src = `/preview/${filename}`;
+            videoPreview.play();
+        }
+
+        generateBtn.addEventListener('click', async function() {
+            generateBtn.disabled = true;
+            updateProgress(0);
+
+            const formData = new FormData();
+            uploadedImages.forEach(({file}) => {
+                formData.append('images[]', file);
+            });
+
+            try {
+                const imageResponse = await fetch('/upload_images', {
+                    method: 'POST',
+                    body: formData
+                });
+                const imageData = await imageResponse.json();
+
+                const audioFormData = new FormData();
+                audioFormData.append('audio', audioFile);
+                const audioResponse = await fetch('/upload_audio', {
+                    method: 'POST',
+                    body: audioFormData
+                });
+                const audioData = await audioResponse.json();
+
+                const options = {
+                    durations: {},
+                    transitions: {},
+                    audio_volume: parseFloat(document.getElementById('audioVolume').value)
+                };
+
+                uploadedImages.forEach((img, index) => {
+                    options.durations[imageData.filenames[index]] = img.duration;
+                    if (index > 0) {
+                        options.transitions[index] = img.transition;
+                    }
+                });
+
+                const generateResponse = await fetch('/generate_video', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        images: imageData.filenames,
+                        audio: audioData.filename,
+                        options: options
+                    })
+                });
+                const generateData = await generateResponse.json();
+
+                if (generateData.success) {
+                    notyf.success('¡Video generado con éxito!');
+                    // Actualizar la lista de videos
+                    const videosResponse = await fetch('/videos');
+                    const videosData = await videosResponse.json();
+                    updateVideosList(videosData.videos);
+                    // Mostrar el video generado
+                    previewVideo(generateData.video_path);
+                } else {
+                    notyf.error('Error al generar el video: ' + generateData.error);
+                }
+            } catch (error) {
+                notyf.error('Error: ' + error.message);
+            } finally {
+                generateBtn.disabled = false;
+                updateProgress(100);
+            }
+        });
+
+        function updateVideosList(videos) {
+            const videosList = document.getElementById('videosList');
+            videosList.innerHTML = videos.map(video => `
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-video me-2"></i>
+                            ${video}
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary me-2" onclick="previewVideo('${video}')">
+                                <i class="fas fa-play"></i>
+                            </button>
+                            <a href="/download/${video}" class="btn btn-sm btn-outline-success">
+                                <i class="fas fa-download"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html> 
